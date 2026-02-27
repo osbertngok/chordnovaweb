@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChordNova Web</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Chord<span>Nova</span> Web</h1>
+            <div class="status-bar">
+                <span id="status" class="status">Loading WASM...</span>
+                <span id="audio-status" class="status">Audio: pending</span>
+            </div>
+        </header>
+
+        <!-- Tab Bar -->
+        <div class="tab-bar">
+            <button class="tab-btn active" data-tab="tab-generate">Generate</button>
+            <button class="tab-btn" data-tab="tab-analyse">Analyse</button>
+            <button class="tab-btn" data-tab="tab-substitute">Substitute</button>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- GENERATE TAB                                                     -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <div id="tab-generate" class="tab-panel active">
+            <!-- Initial Chord -->
+            <div class="chord-input-group">
+                <div class="form-group">
+                    <label>Initial Chord (MIDI notes or note names, comma-separated)</label>
+                    <div class="chord-input-row">
+                        <input type="text" id="gen-chord-input" value="60,64,67" placeholder="e.g. 60,64,67 or C4,E4,G4">
+                        <button id="play-initial-chord" class="btn btn-small">Play</button>
+                        <button id="stop-audio" class="btn btn-small btn-danger">Stop</button>
+                    </div>
+                    <div id="gen-chord-input-names" class="note-name-display"></div>
+                </div>
+                <div class="piano-keyboard" data-input="gen-chord-input"></div>
+            </div>
+
+            <!-- Key Parameters -->
+            <div class="config-section">
+                <div class="config-section-title">Key Parameters</div>
+                <div class="config-section-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label>Note Range</label>
+                            <div class="range-pair">
+                                <input type="number" id="range-lowest" value="0" min="0" max="127">
+                                <span>to</span>
+                                <input type="number" id="range-highest" value="127" min="0" max="127">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Voices (m)</label>
+                            <div class="range-pair">
+                                <input type="number" id="range-m-min" value="1" min="1" max="15">
+                                <span>to</span>
+                                <input type="number" id="range-m-max" value="15" min="1" max="15">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Pitch Classes (n)</label>
+                            <div class="range-pair">
+                                <input type="number" id="range-n-min" value="1" min="1" max="12">
+                                <span>to</span>
+                                <input type="number" id="range-n-max" value="12" min="1" max="12">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>VL Max</label>
+                            <input type="number" id="vl-max" value="4" min="0" max="127">
+                        </div>
+                    </div>
+
+                    <!-- Scale -->
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Overall Scale</label>
+                        <div class="scale-grid">
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="0" checked><span>C</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="1" checked><span>C#</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="2" checked><span>D</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="3" checked><span>D#</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="4" checked><span>E</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="5" checked><span>F</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="6" checked><span>F#</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="7" checked><span>G</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="8" checked><span>G#</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="9" checked><span>A</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="10" checked><span>A#</span></label></div>
+                            <div class="scale-item"><label><input type="checkbox" class="scale-checkbox" value="11" checked><span>B</span></label></div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Chromatic">Chromatic</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Major">Major</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Natural Minor">Minor</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Harmonic Minor">Harm. Minor</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Pentatonic">Pentatonic</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Blues">Blues</button>
+                            <button class="btn btn-tiny btn-secondary scale-preset" data-preset="Whole Tone">Whole Tone</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced: Harmonic Constraints -->
+            <div class="config-section">
+                <div class="config-section-title collapsible-header">Harmonic Constraints</div>
+                <div class="collapsible-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label>Tension (t)</label>
+                            <div class="range-pair">
+                                <input type="number" id="harm-t-min" value="0" step="0.1">
+                                <span>to</span>
+                                <input type="number" id="harm-t-max" value="100" step="0.1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Chroma (k)</label>
+                            <div class="range-pair">
+                                <input type="number" id="harm-k-min" value="0" step="0.1">
+                                <span>to</span>
+                                <input type="number" id="harm-k-max" value="100" step="0.1">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Common Notes (c)</label>
+                            <div class="range-pair">
+                                <input type="number" id="harm-c-min" value="0" min="0">
+                                <span>to</span>
+                                <input type="number" id="harm-c-max" value="15" min="0">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>VL Distance (sv)</label>
+                            <div class="range-pair">
+                                <input type="number" id="harm-sv-min" value="0" min="0">
+                                <span>to</span>
+                                <input type="number" id="harm-sv-max" value="100" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced: Alignment -->
+            <div class="config-section">
+                <div class="config-section-title collapsible-header">Alignment</div>
+                <div class="collapsible-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label>Mode</label>
+                            <select id="align-mode">
+                                <option value="Unlimited">Unlimited</option>
+                                <option value="Interval">Interval</option>
+                                <option value="List">List</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Interval Range</label>
+                            <div class="range-pair">
+                                <input type="number" id="align-i-min" value="0" min="0">
+                                <span>to</span>
+                                <input type="number" id="align-i-max" value="24" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced: Exclusion -->
+            <div class="config-section">
+                <div class="config-section-title collapsible-header">Exclusion Rules</div>
+                <div class="collapsible-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label><input type="checkbox" id="exclusion-enabled"> Enable exclusion</label>
+                        </div>
+                        <div class="form-group">
+                            <label>Excluded pitch classes (0-11, comma-separated)</label>
+                            <input type="text" id="exclusion-notes" placeholder="e.g. 1,6">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced: Pedal Notes -->
+            <div class="config-section">
+                <div class="config-section-title collapsible-header">Pedal Notes</div>
+                <div class="collapsible-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label><input type="checkbox" id="pedal-enabled"> Enable pedal</label>
+                        </div>
+                        <div class="form-group">
+                            <label>Pedal notes (MIDI, comma-separated)</label>
+                            <input type="text" id="pedal-notes" placeholder="e.g. 60">
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="pedal-in-bass"> In bass</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced: Sort & Uniqueness -->
+            <div class="config-section">
+                <div class="config-section-title collapsible-header">Sort & Output</div>
+                <div class="collapsible-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label>Uniqueness</label>
+                            <select id="unique-mode">
+                                <option value="Disabled">Disabled</option>
+                                <option value="RemoveDup">Remove Duplicates</option>
+                                <option value="RemoveDupType">Remove Dup Type</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Sort Order (e.g. T+S)</label>
+                            <input type="text" id="sort-order" placeholder="e.g. T+S">
+                        </div>
+                        <div class="form-group">
+                            <label><input type="checkbox" id="continual-mode"> Continual mode</label>
+                        </div>
+                        <div class="form-group">
+                            <label>Loop count</label>
+                            <input type="number" id="loop-count" value="1" min="1" max="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Generate Button -->
+            <div style="margin: 1.5rem 0;">
+                <button id="generate-btn" class="btn" style="font-size: 1.05rem; padding: 0.6rem 2rem;">Generate Chords</button>
+            </div>
+
+            <!-- Results -->
+            <div id="gen-results"></div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- ANALYSE TAB                                                      -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <div id="tab-analyse" class="tab-panel">
+            <div class="chord-input-group">
+                <div class="form-group">
+                    <label>Antecedent Chord</label>
+                    <div class="chord-input-row">
+                        <input type="text" id="analyse-ante-input" value="60,64,67" placeholder="e.g. 60,64,67">
+                        <button id="play-ante-chord" class="btn btn-small">Play</button>
+                    </div>
+                    <div id="analyse-ante-input-names" class="note-name-display"></div>
+                </div>
+                <div class="piano-keyboard" data-input="analyse-ante-input"></div>
+            </div>
+
+            <div class="chord-input-group">
+                <div class="form-group">
+                    <label>Consequent Chord</label>
+                    <div class="chord-input-row">
+                        <input type="text" id="analyse-post-input" value="60,65,69" placeholder="e.g. 60,65,69">
+                        <button id="play-post-chord" class="btn btn-small">Play</button>
+                    </div>
+                    <div id="analyse-post-input-names" class="note-name-display"></div>
+                </div>
+                <div class="piano-keyboard" data-input="analyse-post-input"></div>
+            </div>
+
+            <div style="margin: 1.5rem 0;">
+                <button id="analyse-btn" class="btn" style="font-size: 1.05rem; padding: 0.6rem 2rem;">Analyse</button>
+            </div>
+
+            <div id="analyse-results"></div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <!-- SUBSTITUTE TAB                                                   -->
+        <!-- ════════════════════════════════════════════════════════════════ -->
+        <div id="tab-substitute" class="tab-panel">
+            <div class="chord-input-group">
+                <div class="form-group">
+                    <label>Antecedent Chord</label>
+                    <div class="chord-input-row">
+                        <input type="text" id="sub-ante-input" value="60,64,67" placeholder="e.g. 60,64,67">
+                        <button id="play-sub-ante" class="btn btn-small">Play</button>
+                    </div>
+                    <div id="sub-ante-input-names" class="note-name-display"></div>
+                </div>
+                <div class="piano-keyboard" data-input="sub-ante-input"></div>
+            </div>
+
+            <div class="chord-input-group">
+                <div class="form-group">
+                    <label>Consequent Chord</label>
+                    <div class="chord-input-row">
+                        <input type="text" id="sub-post-input" value="60,65,69" placeholder="e.g. 60,65,69">
+                        <button id="play-sub-post" class="btn btn-small">Play</button>
+                    </div>
+                    <div id="sub-post-input-names" class="note-name-display"></div>
+                </div>
+                <div class="piano-keyboard" data-input="sub-post-input"></div>
+            </div>
+
+            <div class="config-section">
+                <div class="config-section-title">Substitution Settings</div>
+                <div class="config-section-body">
+                    <div class="inline-fields">
+                        <div class="form-group">
+                            <label>Substitute Target</label>
+                            <select id="sub-object">
+                                <option value="Postchord">Post-chord</option>
+                                <option value="Antechord">Ante-chord</option>
+                                <option value="BothChords">Both Chords</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin: 1.5rem 0;">
+                <button id="substitute-btn" class="btn" style="font-size: 1.05rem; padding: 0.6rem 2rem;">Find Substitutes</button>
+            </div>
+
+            <div id="sub-results"></div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
